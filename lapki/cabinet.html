@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Личный кабинет — приют «Лапки»</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Nunito+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="">
+<div id="header"></div>
+
+<section class="section"><div class="container">
+  <div class="cab-head">
+    <div>
+      <div class="kicker" id="hello"></div>
+      <h2 id="title">Личный кабинет</h2>
+    </div>
+    <span class="role-badge" id="role"></span>
+  </div>
+  <div id="content"></div>
+</div></section>
+
+<!-- модальное окно для CRUD питомцев (админ) -->
+<div class="modal" id="modal"><div class="box">
+  <h3 id="mTitle">Питомец</h3>
+  <input type="hidden" id="mId">
+  <div class="field"><label for="mName">Кличка</label><input id="mName" type="text"></div>
+  <div class="field"><label for="mSpecies">Вид</label>
+    <select id="mSpecies"><option value="cat">Кошка</option><option value="dog">Собака</option></select></div>
+  <div class="field"><label for="mAge">Возраст</label><input id="mAge" type="text" placeholder="2 года"></div>
+  <div class="field"><label for="mStatus">Статус</label>
+    <select id="mStatus"><option value="ищет дом">ищет дом</option><option value="зарезервирован">зарезервирован</option></select></div>
+  <div class="field"><label for="mDesc">Описание</label><textarea id="mDesc" rows="3"></textarea></div>
+  <div class="row">
+    <button class="btn btn-ghost btn-sm" id="mCancel">Отмена</button>
+    <button class="btn btn-primary btn-sm" id="mSave">Сохранить</button>
+  </div>
+</div></div>
+
+<div id="footer"></div>
+<script src="js/data.js"></script>
+<script src="js/db.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script>
+  const me = Auth.require();            // защита: без входа — редирект на login.html
+  if(me){
+    document.getElementById("hello").textContent = "Здравствуйте, " + me.name;
+    const roleEl = document.getElementById("role");
+    if(me.role === "admin"){ roleEl.textContent = "👑 Администратор"; roleEl.classList.add("admin"); }
+    else { roleEl.textContent = "🐾 Волонтёр"; }
+    me.role === "admin" ? renderAdmin() : renderVolunteer();
+  }
+
+  const today = () => new Date().toLocaleDateString("ru-RU");
+  const esc = s => String(s||"").replace(/[<>&]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
+  function statusBadge(s){
+    if(s==="одобрена") return `<span class="status ok">одобрена</span>`;
+    if(s==="отклонена") return `<span class="status no">отклонена</span>`;
+    return `<span class="status new">новая</span>`;
+  }
+
+  /* ============ ВОЛОНТЁР ============ */
+  function renderVolunteer(){
+    const pets = DB.pets().filter(p => p.status === "ищет дом");
+    const opts = pets.map(p => `<option value="${p.id}">${esc(p.name)} (${p.speciesLabel})</option>`).join("");
+    document.getElementById("content").innerHTML = `
+      <div class="cab-section">
+        <h2>Профиль</h2>
+        <div class="profile-row">
+          <span class="pill"><b>Имя:</b> ${esc(me.name)}</span>
+          <span class="pill"><b>E-mail:</b> ${esc(me.email)}</span>
+          <span class="pill"><b>Роль:</b> волонтёр</span>
+        </div>
+      </div>
+
+      <div class="cab-section">
+        <h2>Подать заявку</h2>
+        <p class="hint">Выберите питомца и тип заявки — приют рассмотрит её и свяжется с вами.</p>
+        <div class="alert" id="okReq">✅ Заявка отправлена! Статус можно отслеживать ниже.</div>
+        <div class="field"><label for="rPet">Питомец</label><select id="rPet">${opts || '<option value="">Нет доступных питомцев</option>'}</select></div>
+        <div class="field"><label for="rType">Тип заявки</label>
+          <select id="rType">
+            <option value="Хочу забрать">Хочу забрать домой</option>
+            <option value="Хочу помочь">Хочу помочь (выгул, уход)</option>
+          </select></div>
+        <div class="field"><label for="rMsg">Сообщение</label><textarea id="rMsg" rows="3" placeholder="Пара слов о себе и опыте"></textarea></div>
+        <button class="btn btn-primary" id="rSend">Отправить заявку</button>
+      </div>
+
+      <div class="cab-section">
+        <h2>Мои заявки</h2>
+        <p class="hint">Здесь отображаются поданные вами заявки и их текущий статус.</p>
+        <div class="req-list" id="myReqs"></div>
+      </div>`;
+
+    document.getElementById("rSend").addEventListener("click", () => {
+      const petId = +document.getElementById("rPet").value;
+      const pet = DB.pets().find(p => p.id === petId);
+      if(!pet) return;
+      const reqs = DB.requests();
+      reqs.push({
+        id: DB.nextId(reqs), type: document.getElementById("rType").value,
+        petId: pet.id, petName: pet.name, userId: me.id, userName: me.name,
+        message: document.getElementById("rMsg").value.trim(), status: "новая", date: today()
+      });
+      DB.saveRequests(reqs);
+      document.getElementById("okReq").classList.add("show");
+      document.getElementById("rMsg").value = "";
+      renderMyReqs();
+    });
+
+    renderMyReqs();
+  }
+
+  function renderMyReqs(){
+    const mine = DB.requests().filter(r => r.userId === me.id);
+    const box = document.getElementById("myReqs");
+    if(!mine.length){ box.innerHTML = `<p class="empty">У вас пока нет заявок.</p>`; return; }
+    box.innerHTML = mine.map(r => `
+      <div class="req">
+        <div class="info">
+          <b>${esc(r.type)} · ${esc(r.petName)}</b>
+          <div class="who">${esc(r.message) || "—"} · ${r.date}</div>
+        </div>
+        <div class="side">
+          ${statusBadge(r.status)}
+          ${r.status==="новая" ? `<div class="acts"><button class="icon-btn del" data-cancel="${r.id}">Отменить</button></div>` : ""}
+        </div>
+      </div>`).join("");
+    box.querySelectorAll("[data-cancel]").forEach(b => b.addEventListener("click", () => {
+      if(confirm("Отменить заявку?")){
+        DB.saveRequests(DB.requests().filter(x => x.id != b.dataset.cancel));
+        renderMyReqs();
+      }
+    }));
+  }
+
+  /* ============ АДМИНИСТРАТОР ============ */
+  function renderAdmin(){
+    document.getElementById("content").innerHTML = `
+      <div class="cab-section">
+        <div class="admin-bar">
+          <div><h2>Питомцы</h2><p class="hint" style="margin:0">Добавление, редактирование и удаление записей.</p></div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-accent btn-sm" id="btnAdd">+ Добавить</button>
+            <button class="btn btn-ghost btn-sm" id="btnReset">Сбросить данные</button>
+          </div>
+        </div>
+        <table class="table">
+          <thead><tr><th>ID</th><th>Кличка</th><th>Вид</th><th>Возраст</th><th>Статус</th><th style="text-align:right">Действия</th></tr></thead>
+          <tbody id="petRows"></tbody>
+        </table>
+      </div>
+
+      <div class="cab-section">
+        <h2>Заявки волонтёров</h2>
+        <p class="hint">Рассмотрите заявки: одобрите или отклоните.</p>
+        <div class="req-list" id="allReqs"></div>
+      </div>
+
+      <div class="cab-section">
+        <h2>Пользователи</h2>
+        <p class="hint">Зарегистрированные пользователи системы.</p>
+        <table class="table">
+          <thead><tr><th>ID</th><th>Имя</th><th>E-mail</th><th>Роль</th></tr></thead>
+          <tbody id="userRows"></tbody>
+        </table>
+      </div>`;
+
+    document.getElementById("btnAdd").addEventListener("click", () => openModal(null));
+    document.getElementById("btnReset").addEventListener("click", () => {
+      if(confirm("Вернуть исходные данные (питомцы, заявки, пользователи)?")){ DB.resetAll(); location.reload(); }
+    });
+    renderPetRows(); renderAllReqs(); renderUserRows();
+  }
+
+  function renderPetRows(){
+    document.getElementById("petRows").innerHTML = DB.pets().map(p => `
+      <tr>
+        <td>${p.id}</td><td><b>${esc(p.name)}</b></td>
+        <td>${p.species==="cat"?"Кошка":"Собака"}</td><td>${esc(p.age)}</td><td>${esc(p.status)}</td>
+        <td style="text-align:right">
+          <button class="icon-btn" data-edit="${p.id}">Изменить</button>
+          <button class="icon-btn del" data-del="${p.id}">Удалить</button>
+        </td>
+      </tr>`).join("");
+    const rows = document.getElementById("petRows");
+    rows.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => openModal(DB.pets().find(p => p.id == b.dataset.edit))));
+    rows.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
+      if(confirm("Удалить запись о питомце?")){ DB.savePets(DB.pets().filter(p => p.id != b.dataset.del)); renderPetRows(); }
+    }));
+  }
+
+  function renderAllReqs(){
+    const reqs = DB.requests();
+    const box = document.getElementById("allReqs");
+    if(!reqs.length){ box.innerHTML = `<p class="empty">Заявок пока нет.</p>`; return; }
+    box.innerHTML = reqs.map(r => `
+      <div class="req">
+        <div class="info">
+          <b>${esc(r.type)} · ${esc(r.petName)}</b>
+          <div class="who">от ${esc(r.userName)} · ${r.date}${r.message ? " · «"+esc(r.message)+"»" : ""}</div>
+        </div>
+        <div class="side">
+          ${statusBadge(r.status)}
+          <div class="acts">
+            <button class="icon-btn" data-ok="${r.id}">Одобрить</button>
+            <button class="icon-btn del" data-no="${r.id}">Отклонить</button>
+          </div>
+        </div>
+      </div>`).join("");
+    const setStatus = (id, st) => { const a = DB.requests().map(x => x.id==id ? {...x, status:st} : x); DB.saveRequests(a); renderAllReqs(); };
+    box.querySelectorAll("[data-ok]").forEach(b => b.addEventListener("click", () => setStatus(b.dataset.ok, "одобрена")));
+    box.querySelectorAll("[data-no]").forEach(b => b.addEventListener("click", () => setStatus(b.dataset.no, "отклонена")));
+  }
+
+  function renderUserRows(){
+    document.getElementById("userRows").innerHTML = DB.users().map(u => `
+      <tr><td>${u.id}</td><td><b>${esc(u.name)}</b></td><td>${esc(u.email)}</td>
+      <td>${u.role==="admin"?"администратор":"волонтёр"}</td></tr>`).join("");
+  }
+
+  /* модальное окно CRUD */
+  const modal = document.getElementById("modal");
+  function openModal(p){
+    document.getElementById("mTitle").textContent = p ? "Редактировать питомца" : "Новый питомец";
+    document.getElementById("mId").value = p ? p.id : "";
+    document.getElementById("mName").value = p ? p.name : "";
+    document.getElementById("mSpecies").value = p ? p.species : "cat";
+    document.getElementById("mAge").value = p ? p.age : "";
+    document.getElementById("mStatus").value = p ? p.status : "ищет дом";
+    document.getElementById("mDesc").value = p ? p.desc : "";
+    modal.classList.add("show");
+  }
+  document.getElementById("mCancel").addEventListener("click", () => modal.classList.remove("show"));
+  modal.addEventListener("click", e => { if(e.target===modal) modal.classList.remove("show"); });
+  document.getElementById("mSave").addEventListener("click", () => {
+    const id = document.getElementById("mId").value;
+    const sp = document.getElementById("mSpecies").value;
+    const obj = {
+      name: document.getElementById("mName").value.trim() || "Без клички",
+      species: sp, speciesLabel: sp==="cat" ? "Кошка" : "Собака",
+      age: document.getElementById("mAge").value.trim() || "—",
+      status: document.getElementById("mStatus").value,
+      desc: document.getElementById("mDesc").value.trim(),
+    };
+    let pets = DB.pets();
+    if(id){ pets = pets.map(p => p.id==id ? {...p, ...obj} : p); }
+    else { pets.push({ id: DB.nextId(pets), ...obj }); }
+    DB.savePets(pets); renderPetRows(); modal.classList.remove("show");
+  });
+</script>
+</body>
+</html>

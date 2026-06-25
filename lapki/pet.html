@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Питомец — приют «Лапки»</title>
+<meta name="description" content="Подробная информация о питомце приюта «Лапки».">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Nunito+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="catalog.html">
+<div id="header"></div>
+
+<div class="container">
+  <div class="breadcrumb"><a href="index.html">Главная</a> / <a href="catalog.html">Каталог</a> / <span id="crumb">Питомец</span></div>
+  <div class="detail" id="detail"></div>
+</div>
+
+<div id="footer"></div>
+<script src="js/data.js"></script>
+<script src="js/db.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script>
+  const id = +getParam("id");
+  const p = LAPKI.PETS.find(x=>x.id===id);
+  const box = document.getElementById("detail");
+
+  if(!p){
+    box.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0">
+      <h1>Питомец не найден</h1>
+      <p class="muted" style="margin:12px 0 20px">Возможно, он уже обрёл дом 🏡</p>
+      <a class="btn btn-primary" href="catalog.html">Вернуться в каталог</a></div>`;
+  } else {
+    document.title = `${p.name} — приют «Лапки»`;
+    document.getElementById("crumb").textContent = p.name;
+    const cover = LAPKI.COVERS[(p.id-1) % LAPKI.COVERS.length];
+    box.innerHTML = `
+      <div class="cover" style="background:${cover}">${LAPKI.animalSVG(p.species)}</div>
+      <div>
+        <span class="pet-badge" style="position:static;display:inline-block;margin-bottom:10px">${p.status}</span>
+        <h1>${p.name}</h1>
+        <p class="muted">${p.breed}</p>
+        <div class="spec">
+          <div class="item"><span>Вид</span><b>${p.speciesLabel}</b></div>
+          <div class="item"><span>Возраст</span><b>${p.age}</b></div>
+          <div class="item"><span>Пол</span><b>${p.sex}</b></div>
+          <div class="item"><span>Размер</span><b>${p.size}</b></div>
+        </div>
+        <p class="desc">${p.desc}</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="contacts.html?pet=${encodeURIComponent(p.name)}">Хочу забрать ${p.name}</a>
+          <a class="btn btn-ghost" href="catalog.html">← К каталогу</a>
+        </div>
+      </div>`;
+  }
+</script>
+</body>
+</html>
