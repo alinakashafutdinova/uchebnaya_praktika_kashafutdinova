@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Личный кабинет — приют «Лапки»</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Nunito+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="">
+<div id="header"></div>
+
+<section class="section"><div class="container">
+  <div class="cab-head">
+    <div>
+      <div class="kicker" id="hello"></div>
+      <h2 id="title">Личный кабинет</h2>
+    </div>
+    <span class="role-badge" id="role"></span>
+  </div>
+  <div id="content"></div>
+</div></section>
+
+<!-- модальное окно: статья (админ) -->
+<div class="modal" id="modal"><div class="box">
+  <h3 id="mTitle">Статья</h3>
+  <input type="hidden" id="mId">
+  <div class="field"><label for="mName">Заголовок</label><input id="mName" type="text"></div>
+  <div class="field"><label for="mCat">Категория</label><input id="mCat" type="text" placeholder="Уход, Питание, Истории…"></div>
+  <div class="field"><label for="mAuthor">Автор</label><input id="mAuthor" type="text"></div>
+  <div class="field"><label for="mExcerpt">Анонс (короткое описание)</label><textarea id="mExcerpt" rows="2"></textarea></div>
+  <div class="field"><label for="mBody">Текст статьи</label><textarea id="mBody" rows="6" placeholder="Абзацы разделяйте пустой строкой"></textarea></div>
+  <div class="row">
+    <button class="btn btn-ghost btn-sm" id="mCancel">Отмена</button>
+    <button class="btn btn-primary btn-sm" id="mSave">Сохранить</button>
+  </div>
+</div></div>
+
+<div id="footer"></div>
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script>
+  const me = Auth.require();
+  const today = () => new Date().toLocaleDateString("ru-RU");
+  const esc = s => String(s||"").replace(/[<>&]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
+  function statusBadge(s){
+    if(s==="одобрена") return `<span class="status ok">одобрена</span>`;
+    if(s==="отклонена") return `<span class="status no">отклонена</span>`;
+    return `<span class="status new">новая</span>`;
+  }
+
+  if(me){
+    document.getElementById("hello").textContent = "Здравствуйте, " + me.name;
+    const roleEl = document.getElementById("role");
+    if(me.role === "admin"){ roleEl.textContent = "👑 Администратор"; roleEl.classList.add("admin"); }
+    else { roleEl.textContent = "🐾 Волонтёр"; }
+    me.role === "admin" ? renderAdmin() : renderVolunteer();
+  }
+
+  /* ===================== ВОЛОНТЁР ===================== */
+  function renderVolunteer(){
+    const pets = LAPKI.PETS.filter(p => p.status === "ищет дом");
+    const opts = pets.map(p => `<option value="${p.id}">${esc(p.name)} (${p.speciesLabel})</option>`).join("");
+    document.getElementById("content").innerHTML = `
+      <div class="cab-section">
+        <h2>Профиль</h2>
+        <div class="profile-row">
+          <span class="pill"><b>Имя:</b> ${esc(me.name)}</span>
+          <span class="pill"><b>E-mail:</b> ${esc(me.email)}</span>
+          <span class="pill"><b>Роль:</b> волонтёр</span>
+        </div>
+      </div>
+
+      <div class="cab-section">
+        <h2>Оставить заявку</h2>
+        <p class="hint">Выберите питомца и тип заявки — она поступит администратору приюта на рассмотрение.</p>
+        <div class="alert" id="okReq">✅ Заявка отправлена! Администратор увидит её и рассмотрит. Статус — ниже.</div>
+        <div class="field"><label for="rPet">Питомец</label><select id="rPet">${opts || '<option value="">Нет доступных питомцев</option>'}</select></div>
+        <div class="field"><label for="rType">Тип заявки</label>
+          <select id="rType">
+            <option value="Хочу забрать">Хочу забрать домой</option>
+            <option value="Хочу помочь">Хочу помочь (выгул, уход)</option>
+          </select></div>
+        <div class="field"><label for="rMsg">Сообщение</label><textarea id="rMsg" rows="3" placeholder="Пара слов о себе"></textarea></div>
+        <button class="btn btn-primary" id="rSend">Отправить заявку</button>
+      </div>
+
+      <div class="cab-section">
+        <h2>Мои заявки</h2>
+        <p class="hint">Здесь отображаются ваши заявки и их статус.</p>
+        <div class="req-list" id="myReqs"></div>
+      </div>`;
+
+    document.getElementById("rSend").addEventListener("click", () => {
+      const petId = +document.getElementById("rPet").value;
+      const pet = LAPKI.PETS.find(p => p.id === petId);
+      if(!pet) return;
+      const reqs = Store.requests();
+      reqs.push({
+        id: Store.nextId(reqs), type: document.getElementById("rType").value,
+        petId: pet.id, petName: pet.name, userId: me.id, userName: me.name,
+        message: document.getElementById("rMsg").value.trim(), status: "новая", date: today()
+      });
+      Store.saveRequests(reqs);
+      document.getElementById("okReq").classList.add("show");
+      document.getElementById("rMsg").value = "";
+      renderMyReqs();
+    });
+    renderMyReqs();
+  }
+
+  function renderMyReqs(){
+    const mine = Store.requests().filter(r => r.userId === me.id);
+    const box = document.getElementById("myReqs");
+    if(!mine.length){ box.innerHTML = `<p class="empty">У вас пока нет заявок.</p>`; return; }
+    box.innerHTML = mine.map(r => `
+      <div class="req">
+        <div class="info">
+          <b>${esc(r.type)} · ${esc(r.petName)}</b>
+          <div class="who">${esc(r.message) || "—"} · ${r.date}</div>
+        </div>
+        <div class="side">
+          ${statusBadge(r.status)}
+          ${r.status==="новая" ? `<div class="acts"><button class="icon-btn del" data-cancel="${r.id}">Отменить</button></div>` : ""}
+        </div>
+      </div>`).join("");
+    box.querySelectorAll("[data-cancel]").forEach(b => b.addEventListener("click", () => {
+      if(confirm("Отменить заявку?")){ Store.saveRequests(Store.requests().filter(x => x.id != b.dataset.cancel)); renderMyReqs(); }
+    }));
+  }
+
+  /* ===================== АДМИНИСТРАТОР ===================== */
+  function renderAdmin(){
+    document.getElementById("content").innerHTML = `
+      <div class="cab-section">
+        <div class="admin-bar">
+          <div><h2>Статьи</h2><p class="hint" style="margin:0">Добавление и редактирование материалов блога.</p></div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-accent btn-sm" id="btnAdd">+ Добавить статью</button>
+            <button class="btn btn-ghost btn-sm" id="btnReset">Сбросить</button>
+          </div>
+        </div>
+        <div class="art-admin" id="artList"></div>
+      </div>
+
+      <div class="cab-section">
+        <h2>Заявки волонтёров</h2>
+        <p class="hint">Заявки, поступившие от волонтёров. Одобрите или отклоните.</p>
+        <div class="req-list" id="allReqs"></div>
+      </div>`;
+
+    document.getElementById("btnAdd").addEventListener("click", () => openModal(null));
+    document.getElementById("btnReset").addEventListener("click", () => {
+      if(confirm("Вернуть исходные статьи и очистить заявки?")){ Store.reset(); location.reload(); }
+    });
+    renderArtList(); renderAllReqs();
+  }
+
+  function renderArtList(){
+    const arts = Store.articles();
+    const box = document.getElementById("artList");
+    box.innerHTML = arts.length ? arts.map(a => `
+      <div class="art-row">
+        <div class="info">
+          <b>${esc(a.title)}</b>
+          <div class="who">${esc(a.cat)} · ${esc(a.author)} · ${esc(a.date||"")}</div>
+        </div>
+        <div class="acts">
+          <a class="btn btn-ghost btn-sm" href="article.html?id=${a.id}" target="_blank">Открыть</a>
+          <button class="icon-btn" data-edit="${a.id}">Изменить</button>
+          <button class="icon-btn del" data-del="${a.id}">Удалить</button>
+        </div>
+      </div>`).join("") : `<p class="empty">Статей пока нет.</p>`;
+    box.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => openModal(Store.articles().find(a => a.id == b.dataset.edit))));
+    box.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
+      if(confirm("Удалить статью?")){ Store.saveArticles(Store.articles().filter(a => a.id != b.dataset.del)); renderArtList(); }
+    }));
+  }
+
+  function renderAllReqs(){
+    const reqs = Store.requests();
+    const box = document.getElementById("allReqs");
+    if(!reqs.length){ box.innerHTML = `<p class="empty">Заявок пока нет.</p>`; return; }
+    box.innerHTML = reqs.map(r => `
+      <div class="req">
+        <div class="info">
+          <b>${esc(r.type)} · ${esc(r.petName)}</b>
+          <div class="who">от ${esc(r.userName)} · ${r.date}${r.message ? " · «"+esc(r.message)+"»" : ""}</div>
+        </div>
+        <div class="side">
+          ${statusBadge(r.status)}
+          <div class="acts">
+            <button class="icon-btn" data-ok="${r.id}">Одобрить</button>
+            <button class="icon-btn del" data-no="${r.id}">Отклонить</button>
+          </div>
+        </div>
+      </div>`).join("");
+    const setStatus = (id, st) => { Store.saveRequests(Store.requests().map(x => x.id==id ? {...x, status:st} : x)); renderAllReqs(); };
+    box.querySelectorAll("[data-ok]").forEach(b => b.addEventListener("click", () => setStatus(b.dataset.ok, "одобрена")));
+    box.querySelectorAll("[data-no]").forEach(b => b.addEventListener("click", () => setStatus(b.dataset.no, "отклонена")));
+  }
+
+  /* модальное окно статьи */
+  const modal = document.getElementById("modal");
+  function bodyToText(body){
+    if(Array.isArray(body)) return body.map(x => Array.isArray(x) ? x[1] : x).join("\n\n");
+    return String(body||"");
+  }
+  function openModal(a){
+    document.getElementById("mTitle").textContent = a ? "Редактировать статью" : "Новая статья";
+    document.getElementById("mId").value = a ? a.id : "";
+    document.getElementById("mName").value = a ? a.title : "";
+    document.getElementById("mCat").value = a ? a.cat : "";
+    document.getElementById("mAuthor").value = a ? a.author : me.name;
+    document.getElementById("mExcerpt").value = a ? (a.excerpt||"") : "";
+    document.getElementById("mBody").value = a ? bodyToText(a.body) : "";
+    modal.classList.add("show");
+  }
+  document.getElementById("mCancel").addEventListener("click", () => modal.classList.remove("show"));
+  modal.addEventListener("click", e => { if(e.target===modal) modal.classList.remove("show"); });
+  document.getElementById("mSave").addEventListener("click", () => {
+    const id = document.getElementById("mId").value;
+    const body = document.getElementById("mBody").value.trim();
+    const obj = {
+      title: document.getElementById("mName").value.trim() || "Без заголовка",
+      cat: document.getElementById("mCat").value.trim() || "Статья",
+      author: document.getElementById("mAuthor").value.trim() || me.name,
+      excerpt: document.getElementById("mExcerpt").value.trim() || (body.slice(0,110) + "…"),
+      body, read: Math.max(1, Math.round(body.length/600)) + " мин",
+    };
+    let arts = Store.articles();
+    if(id){ arts = arts.map(a => a.id==id ? {...a, ...obj} : a); }
+    else { obj.id = Store.nextId(arts); obj.date = today(); arts.unshift(obj); }
+    Store.saveArticles(arts); renderArtList(); modal.classList.remove("show");
+  });
+</script>
+</body>
+</html>

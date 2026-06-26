@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Приют «Лапки» — дом ждёт каждую лапку</title>
+<meta name="description" content="Приют для животных «Лапки»: каталог питомцев, ищущих дом, статьи об уходе, калькулятор нормы корма и обратная связь.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Nunito+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="index.html">
+<div id="header"></div>
+
+<!-- HERO -->
+<section class="hero"><div class="container hero-grid">
+  <div>
+    <span class="eyebrow" data-reveal>🐾 Приют для животных</span>
+    <h1 data-reveal>Дом ждёт <em>каждую лапку</em></h1>
+    <p class="lead" data-reveal>Мы заботимся о бездомных животных и помогаем им найти настоящих хозяев. Познакомьтесь с нашими питомцами — возможно, ваш будущий друг уже здесь.</p>
+    <div class="hero-cta" data-reveal>
+      <a class="btn btn-primary" href="catalog.html">Посмотреть питомцев</a>
+      <a class="btn btn-ghost" href="contacts.html">Как помочь приюту</a>
+    </div>
+    <div class="hero-stats" data-reveal>
+      <div class="s"><b id="stPets">0</b><span>питомцев ждут дом</span></div>
+      <div class="s"><b>340+</b><span>нашли семью</span></div>
+      <div class="s"><b>12</b><span>лет помогаем</span></div>
+    </div>
+  </div>
+  <div class="hero-art" data-reveal>
+    <div class="blob" id="heroBlob"></div>
+    <div class="chip c1"><span class="dot"></span>Привит и здоров</div>
+    <div class="chip c2">🏡 Готов к переезду</div>
+  </div>
+</div></section>
+
+<!-- FEATURED PETS -->
+<section class="section"><div class="container">
+  <div class="sec-head">
+    <div>
+      <div class="kicker">Наши подопечные</div>
+      <h2>Познакомьтесь с питомцами</h2>
+    </div>
+    <a class="btn btn-ghost btn-sm" href="catalog.html">Весь каталог →</a>
+  </div>
+  <div class="pet-grid" id="featured"></div>
+</div></section>
+
+<!-- STEPS -->
+<section class="section tint"><div class="container">
+  <div class="sec-head"><div>
+    <div class="kicker">Просто</div>
+    <h2>Как забрать питомца</h2>
+  </div></div>
+  <div class="steps">
+    <div class="step" data-reveal><div class="n">1</div><h3>Выберите друга</h3><p>Изучите каталог и найдите питомца, который вам по душе.</p></div>
+    <div class="step" data-reveal><div class="n">2</div><h3>Свяжитесь с нами</h3><p>Оставьте заявку через форму обратной связи или позвоните.</p></div>
+    <div class="step" data-reveal><div class="n">3</div><h3>Знакомство</h3><p>Приезжайте в приют, чтобы лично пообщаться с животным.</p></div>
+    <div class="step" data-reveal><div class="n">4</div><h3>Дом</h3><p>Оформляем документы — и питомец отправляется к вам домой.</p></div>
+  </div>
+</div></section>
+
+<!-- ARTICLES PREVIEW -->
+<section class="section"><div class="container">
+  <div class="sec-head">
+    <div><div class="kicker">Полезное</div><h2>Статьи об уходе</h2></div>
+    <a class="btn btn-ghost btn-sm" href="articles.html">Все статьи →</a>
+  </div>
+  <div class="article-grid" id="artPreview"></div>
+</div></section>
+
+<!-- CTA -->
+<section class="section green"><div class="container center">
+  <h2 style="font-size:clamp(28px,4vw,42px);max-width:18ch;margin:0 auto 14px" data-reveal>Подарите дом тому, кто этого ждёт</h2>
+  <p style="color:#cfe0d9;max-width:50ch;margin:0 auto 26px" data-reveal>Каждое животное достойно заботы и любви. Сделайте первый шаг — посмотрите, кто сейчас ищет семью.</p>
+  <a class="btn btn-accent" href="catalog.html" data-reveal>Найти друга</a>
+</div></section>
+
+<div id="footer"></div>
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script>
+  // hero illustration
+  document.getElementById("heroBlob").innerHTML = LAPKI.animalSVG("cat");
+
+  // animated counter
+  const total = LAPKI.PETS.filter(p=>p.status==="ищет дом").length;
+  const el = document.getElementById("stPets");
+  let n=0; const t=setInterval(()=>{ n++; el.textContent=n; if(n>=total) clearInterval(t); }, 90);
+
+  // featured pets (first 4)
+  document.getElementById("featured").innerHTML = LAPKI.PETS.slice(0,4).map((p,i)=>petCard(p,i)).join("");
+
+  function petCard(p,i){
+    const cover = LAPKI.COVERS[i % LAPKI.COVERS.length];
+    return `<a class="pet-card" href="pet.html?id=${p.id}" data-reveal>
+      <div class="pet-cover" style="background:${cover}">
+        <span class="pet-badge">${p.status}</span>${LAPKI.coverInner(p)}
+      </div>
+      <div class="pet-body">
+        <h3>${p.name}</h3>
+        <div class="pet-meta"><span class="tag">${p.speciesLabel}</span><span class="tag">${p.age}</span></div>
+        <p>${p.desc.slice(0,72)}…</p>
+        <span class="btn btn-ghost btn-sm">Подробнее →</span>
+      </div></a>`;
+  }
+
+  // article preview (first 3)
+  document.getElementById("artPreview").innerHTML = Store.articles().slice(0,3).map(a=>`
+    <a class="article-card" href="article.html?id=${a.id}" data-reveal>
+      <span class="cat">${a.cat}</span>
+      <h3>${a.title}</h3>
+      <p class="excerpt">${a.excerpt}</p>
+      <div class="meta"><span>${a.author}</span>·<span>${a.read}</span></div>
+    </a>`).join("");
+</script>
+</body>
+</html>

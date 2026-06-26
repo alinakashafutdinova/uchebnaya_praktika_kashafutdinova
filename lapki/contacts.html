@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Контакты и обратная связь — приют «Лапки»</title>
+<meta name="description" content="Свяжитесь с приютом «Лапки»: форма обратной связи, телефон, адрес и часы работы.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Nunito+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="contacts.html">
+<div id="header"></div>
+
+<section class="section"><div class="container">
+  <div class="breadcrumb" style="padding-top:0;padding-bottom:14px"><a href="index.html">Главная</a> / Контакты</div>
+  <div class="sec-head"><div>
+    <div class="kicker">Напишите нам</div>
+    <h2>Обратная связь</h2>
+  </div></div>
+
+  <div class="form-wrap" style="padding-top:0">
+    <div class="alert" id="ok">✅ Спасибо! Ваше обращение отправлено. Мы свяжемся с вами в ближайшее время.</div>
+    <div class="form-card">
+      <form id="form" novalidate>
+        <div class="field" id="f-name">
+          <label for="name">Имя *</label>
+          <input type="text" id="name" placeholder="Как к вам обращаться">
+          <div class="err">Введите имя (минимум 2 символа).</div>
+        </div>
+        <div class="field" id="f-email">
+          <label for="email">E-mail *</label>
+          <input type="email" id="email" placeholder="you@example.com">
+          <div class="err">Введите корректный адрес e-mail.</div>
+        </div>
+        <div class="field" id="f-topic">
+          <label for="topic">Тема обращения</label>
+          <select id="topic">
+            <option>Хочу забрать питомца</option>
+            <option>Стать волонтёром</option>
+            <option>Помощь приюту</option>
+            <option>Другое</option>
+          </select>
+        </div>
+        <div class="field" id="f-msg">
+          <label for="msg">Сообщение *</label>
+          <textarea id="msg" rows="5" placeholder="Расскажите, чем мы можем помочь"></textarea>
+          <div class="err">Сообщение слишком короткое (минимум 10 символов).</div>
+        </div>
+        <div class="field">
+          <label>Как с вами связаться</label>
+          <div class="checks">
+            <label><input type="checkbox" id="byEmail" checked> по e-mail</label>
+            <label><input type="checkbox" id="byPhone"> по телефону</label>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Отправить обращение</button>
+      </form>
+    </div>
+  </div>
+</div></section>
+
+<div id="footer"></div>
+<script src="js/data.js"></script>
+<script src="js/db.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script>
+  // если пришли со страницы питомца — подставим тему и текст
+  const pet = getParam("pet");
+  if(pet){
+    document.getElementById("topic").value = "Хочу забрать питомца";
+    document.getElementById("msg").value = `Здравствуйте! Меня заинтересовал питомец по кличке ${pet}. Хочу узнать подробнее об оформлении.`;
+  }
+
+  const form = document.getElementById("form");
+  const setErr = (id,bad)=> document.getElementById(id).classList.toggle("invalid", bad);
+
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const msg = document.getElementById("msg").value.trim();
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    const eName = name.length<2, eEmail = !emailOk, eMsg = msg.length<10;
+    setErr("f-name", eName); setErr("f-email", eEmail); setErr("f-msg", eMsg);
+
+    if(eName||eEmail||eMsg) return;
+
+    // имитация POST-Redirect-GET: показываем успех, очищаем форму
+    document.getElementById("ok").classList.add("show");
+    form.reset();
+    window.scrollTo({top:0,behavior:"smooth"});
+  });
+</script>
+</body>
+</html>
